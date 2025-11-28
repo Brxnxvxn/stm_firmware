@@ -8,71 +8,66 @@
 
 #define BAUD_RATE  115200
 
-void usart2_isr() {
+static bool data_available = false;
+static uint8_t data_buf = 0;
 
-    
+void usart2_isr(void) {
+
+    data_available = true;
+
+    //check if ORE bit or RNXE bit is set
+    const bool byte_recv = usart_get_flag(USART2, USART_FLAG_RXNE) == 1;
+    const bool overrun_error = usart_get_flag(USART2, USART_FLAG_ORE) == 1;
+
+    if (byte_recv || overrun_error) {
+        data_buf = (uint8_t)usart_recv(USART2);
+        data_available = true;
+    }
 
 }
-
 
 void uart_setup() {
 
     //set usart clock
     rcc_periph_clock_enable(RCC_USART2);
-
-    //enable usart 
-    USART2_CR1 |= USART_CR1_UE;
-
-    //set data size to 8 bits (1 start bit, 8 data bits, n stop bits)
-    //stops bits is configured in next step
-    USART2_CR1 &= ~(USART_CR1_M);
-
-    //configure stop bits[12:13] (set to 00 for 1 stop bit)
-    USART2_CR2 &= ~(3 << 12);
-
-    //set baud rate for tx and rx
-    uint32_t clock = rcc_get_usart_clk_freq(USART2);
-    USART2_BRR = (clock + BAUD_RATE / 2) / BAUD_RATE;
-
-    //enable interrupt when RXNE=1 or ORE = 1
-    USART2_CR1 |= USART_CR1_RXNEIE;
-
-    //enable receiver
-    USART2_CR1 |= USART_CR1_RE;
-
+    usart_set_mode(USART2, USART_MODE_TX_RX);
+    usart_set_flow_control(USART2, USART_FLOWCONTROL_NONE);
+    usart_set_databits(USART2, 8);
+    usart_set_baudrate(USART2, BAUD_RATE);
+    usart_set_parity(USART2, 0);
+    usart_set_stopbits(USART2, 1);
+    
+    usart_enable_rx_interrupt(USART2);
+    nvic_enable_irq(NVIC_USART2_IRQ);
+    usart_enable(USART2);
 }
 
 void uart_write(uint8_t* data, uint32_t length) {
 
-    //enable transmission for uart by setting TE bit
-    USART2_CR1 |= USART_CR1_TE;
 
-    for(int i = 0; i < length; i++) {
-        uart_write_byte(*(data + i));
+    for(uint32_t i = 0; i < length; i++) {
+        uart_write_byte(*(data));
     }
 
-    //wait for tc bit to set
-    while ( ((USART2_CR1 >> 6) & 1) != 1) {
-
-    }
-
-    //disable transmission
-    USART2_CR1 &= ~USART_CR1_TE;
 }
 
 void uart_write_byte(uint8_t data) {
-    USART2_DR = data;
+    usart_send_blocking(USART2, (uint16_t)data);
 }
 
 void uart_read(uint8_t* data, uint32_t length) {
 
-    for (int i = 0; i < length; i++) {
-        *(data + i) = uart_read_byte();
+    if (length > 0 && data_available) {
+        *data = data_buf;
+        data_available = false;
     }
-
 }
 
 uint8_t uart_read_byte() {
-    uint8_t byte = USART2_DR;
-    return byte;
+    data_available = false;
+    return data_buf;
+}
+
+bool uart_data_available() {
+    return data_available;
 }
