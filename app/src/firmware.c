@@ -2,7 +2,7 @@
 #include <libopencm3/stm32/gpio.h>
 #include <libopencm3/cm3/scb.h>
 
-#include "core/system.h"
+#include "system.h"
 #include "uart.h"
 
 #define LED_PORT        (GPIOA)
@@ -49,6 +49,9 @@ int main(void) {
             uint8_t send_data = byte + 1;
             uart_write(&send_data, 1);
         }
+ 
+        /* Add delay */
+        system_delay(1000);
     }
 
 
