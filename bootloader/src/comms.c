@@ -144,3 +144,7 @@ void comms_write(comms_packet_t* packet)
     /* store last transmitted packet */
     memcpy(&last_tx_packet, packet, sizeof(comms_packet_t));
 }
+
+bool comms_packet_available(void) {
+    return packet_read_index != packet_write_index;
+}

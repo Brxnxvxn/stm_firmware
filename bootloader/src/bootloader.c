@@ -55,15 +55,18 @@ int main(void) {
 
     while (true)
     {
-        uint8_t data = 0x12;
-        uart_write(&data, 1);
+        comms_update();
 
-        if(uart_data_available())
-        {
-            uint8_t byte = uart_read_byte();
-            uint8_t send_data = byte + 1;
-            uart_write(&send_data, 1);
-        }
+        if(comms_packet_available())
+            comms_read(&packet);
+        
+        // comms_write(&packet);
+
+        // while(!uart_data_available());
+        
+        // uint8_t byte = uart_read_byte();
+        // uint8_t send_data = byte + 1;
+        // uart_write(&send_data, 1);
         
         system_delay(500);
     }

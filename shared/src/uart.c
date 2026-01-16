@@ -25,13 +25,16 @@ void usart2_isr(void) {
     const bool overrun_error = usart_get_flag(USART2, USART_FLAG_ORE) == 1;
 
     if (byte_recv || overrun_error) {
-        ring_buffer_write(&rb, (uint8_t)usart_recv(USART2));
+        if(!ring_buffer_write(&rb, (uint8_t)usart_recv(USART2)))
+        {
+            /* errror handling */
+        }
     }
 
 }
 
 void uart_setup() {
-
+    
     //set usart clock
     rcc_periph_clock_enable(RCC_USART2);
     usart_set_mode(USART2, USART_MODE_TX_RX);
@@ -54,7 +57,7 @@ void uart_write(uint8_t* data, uint32_t length) {
 
 
     for(uint32_t i = 0; i < length; i++) {
-        uart_write_byte(*(data));
+        uart_write_byte(*(data + i));
     }
 
 }

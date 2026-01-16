@@ -30,5 +30,6 @@ void comms_create_single_byte_packet(comms_packet_t* packet, uint8_t byte);
 bool comms_is_single_byte_packet(comms_packet_t* packet, uint8_t byte);
 void comms_read(comms_packet_t* packet);
 void comms_write(comms_packet_t* packet);
+bool comms_packet_available(void);
 
 #endif /* COMMS_H */
