@@ -33,6 +33,7 @@
 #define BL_DEVID_RESP               0x35U
 #define BL_FWLEN_REQ                0x44U
 #define BL_FWLEN_RESP               0x45U
+#define BL_FWUPDATE_REQ             0x88U
 
 typedef enum 
 {
@@ -114,6 +115,8 @@ int main(void) {
     uint8_t sync_count = 0U;
     comms_packet_t temp_packet;
     comms_packet_t read_packet;
+
+    uint32_t fw_length = 0U;
 
     while (state != BL_DONE)
     {
@@ -231,7 +234,7 @@ int main(void) {
                     /* read packet */
                     comms_read(&read_packet);
 
-                    uint32_t fw_length = read_packet.data[1] 
+                    fw_length = read_packet.data[1] 
                                         | (read_packet.data[2] << 8)
                                         | (read_packet.data[2] << 16)
                                         | (read_packet.data[2] << 24);
@@ -261,7 +264,37 @@ int main(void) {
 
             case BL_FW_UPDATE:
 
-                /* send fw update request packet */
+                uint32_t current_length = 0U;
+
+                while (current_length < fw_length)
+                {
+
+                    /* send fw update request packet */
+                    comms_create_single_byte_packet(&temp_packet, BL_FWUPDATE_REQ);
+                    comms_write(&temp_packet);
+
+                    /* wait for firmware packet */
+                    while(!comms_packet_available())
+                    {
+                        check_timeout(&bl_timer);
+                        comms_update();
+                        
+                    }
+
+                    /* read packet */
+                    comms_read(&read_packet);
+
+                    /* write to flash */
+                    flash_write((uint32_t* )((uint8_t* )MAIN_APP_START_ADDR + current_length), read_packet.data, read_packet.length);
+
+                    current_length += read_packet.length;
+
+                }
+
+            default:
+                state = BL_SYNC;
+                break;
+
 
 
 
